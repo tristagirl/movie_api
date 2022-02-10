@@ -11,7 +11,7 @@ app.use(morgan('common'));
 
 // GET route located at endpoint '/', returning default textual response
 app.get('/', (req, res) => {
-    res.send('Welcome to my app!');
+    res.send('Welcome to my myFlix!');
 });
 
 // GET route located at endpoint '/movies', returning .json object
