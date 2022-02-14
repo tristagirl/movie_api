@@ -203,8 +203,10 @@ app.delete("/users/:id", (req, res) =>{
 })
 
 app.get("/users"), (req, res) => {
+
+  console.log("Requesting /users");
   res.status(200).json(allUsers);
-}
+};
 
 //GET route located at the endpoint "/movies" which returns a json object in form of a  list of top 10 movies with the status 200 "ok"
 app.get("/movies", (req, res) => {
