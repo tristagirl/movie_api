@@ -1,229 +1,158 @@
-// Imports the express module and the Morgan module
-const express = require('express'),
-    morgan = require('morgan'),
-    bodyParser = require('body-parser'),
-    uuid = require('uuid');
+// Express and Morgan Requires
+const express = require("express"),
+  morgan = require("morgan");
+app = express();
 
-
-let users = [
-    {
-        id: 1,
-        name: "Kim",
-        favoriteMovies: []
-    },
-    {
-        id: 2,
-        name: "Joe",
-        favoriteMovies: ["The Matrix"]
-    }
-];
-
-let movies = [
-    {
-        "Title": "The Matrix",
-        "Genre": {
-            "Name": "Sci-Fi"
-        },
-        "Director": {
-            "Name": "Lana Wachowski"
-        }
-    },
-    {
-        "Title": "Pi",
-        "Genre": {
-            "Name": "Drama"
-        },
-        "Director": {
-            "Name": "Darren Aronofsky"
-        }
-    },
-    {
-        "Title": "American Beauty",
-        "Genre": {
-            "Name": "Drama"
-        },
-        "Director": {
-            "Name": "Sam Mendes"
-        }
-    },
-    {
-        "Title": "Eternal Sunshine of the Spotless Mind",
-        "Genre": {
-            "Name": "Drama"
-        },
-        "Director": {
-            "Name": "Michel Gondry"
-        }
-    },
-    {
-        "Title": "Shutter Island",
-        "Genre": {
-            "Name": "Thriller"
-        },
-        "Director": {
-            "Name": "Martin Scorsese"
-        }
-    },
-    {
-        "Title": "Fight Club",
-        "Genre": {
-            "Name": "Drama"
-        },
-        "Director": {
-            "Name": "David Fincher"
-        }
-    }
-]
-
-// after importing express it needs to be added to the app in order to start using it
-const app = express();
-
-// reads the data out of the request body
+bodyParser = require("body-parser");
 app.use(bodyParser.json());
 
-// Morgan middleware library in use to log all requests to the terminal
-app.use(morgan('common'));
+// List of top movies
+let topMovies = [
+  {
+    title: "The Matrix",
+    genre: "Action",
+    director: "The Wachowskis"
+  },
+  {
+    title: "Eagle Eye",
+    genre: "Action",
+    director: "D.J. Caruso"
+  },
+  {
+    title: "War Games",
+    genre: "Action",
+    director: "John Badham"
+  },
+  {
+    title: "Minority Report",
+    genre: "Action",
+    director: "Steven Spielberg"
+  },
+  {
+    title: "Snowden",
+    genre: "Action",
+    director: "Oliver Stone"
+  },
+  {
+    title: "Die Hard 4.0",
+    genre: "Action",
+    director: "Len Wiseman"
+  },
+  {
+    title: "Tron",
+    genre: "Action",
+    director: "Steven Lisberger"
+  },
+  {
+    title: "The Fifth Estate",
+    genre: "Action",
+    director: "Bill Condon"
+  },
+  {
+    title: "23",
+    genre: "Action",
+    director: "Hans-Christian Schmid"
+  },
+  {
+    title: "Underground",
+    genre: "Action",
+    director: "Robert Connolly"
+  }
+];
 
-// CREATE
-app.post('/users', (req, res) => {
-    const newUser = req.body;
+// Use Express to return all static files in public folder
+app.use(express.static("public"));
 
-    if (newUser) {
-        newUser.id = uuid.v4();
-        users.push(newUser);
-        res.status(201).json(newUser);
-    } else {
-        res.status(400).send('users need names');
-    }
-})
+// Use morgan for logging
+app.use(morgan("common"));
 
-
-// UPDATE
-app.put('/users/:id', (req, res) => {
-    const { id } = req.params;
-    const updatedUser = req.body;
-
-    let user = users.find( user => user.id == id);
-
-    if (user) {
-        user.name = updatedUser.name;
-        res.status(200).json(user);
-    } else {
-        res.status(400).send('no such user');
-    }
-})
-
-
-// CREATE
-app.post('/users/:id/:movieTitle', (req, res) => {
-    const { id, movieTitle } = req.params;
-
-    let user = users.find( user => user.id == id );
-
-    if (user) {
-        user.favoriteMovies.push(movieTitle);
-        res.status(200).send(`${movieTitle} has been added to ${id}'s array`);
-    } else {
-        res.status(400).send('no such user');
-    }
-})
-
-
-// DELETE
-app.delete('/users/:id/:movieTitle', (req, res) => {
-    const { id, movieTitle } = req.params;
-
-    let user = users.find( user => user.id == id );
-
-    if (user) {
-        user.favoriteMovies = user.favoriteMovies.filter( litle => litle !== movieTitle);
-        res.status(200).send( `${movieTitle} has been removed from ${id}'s array`);
-    } else {
-        res.status(400).send('no such user');
-    }
-})
-
-
-// DELETE
-app.delete('/users/:id', (req, res) => {
-    const { id } = req.params;
-
-    let user = users.find( user => user.id == id);
-
-    if (user) {
-        users = users.filter( user => user.id != id);
-        res.status(200).send( `user ${id} has been deleted`);
-    } else {
-        res.status(400).send('no such user');
-    }
-})
-
-
-// READ route located at endpoint '/movies', returning .json object
-app.get('/movies', (req, res) => {
-    res.status(200).json(movies);
+//Get Requests
+app.get("/", (req, res) => {
+  res.send("Welcome to myFlix!");
 });
 
-// READ
-app.get('/movies/:title', (req, res) => {
-    const { title } = req.params;
-    const movie = movies.find ( movie => movie.Title === title );
+//Get ALL Movies
+app.get("/movies", (req, res) => {
+  res.json(topMovies);
+});
 
-    if (movie) {
-        res.status(200).json(movie);
-    } else {
-        res.status(400).send('no such movie');
-    }
-})
+//Get movies by Title
+app.get("/movies/:title", (req, res) => {
+  res.json(
+    topMovies.find(movie => {
+      return movie.title === req.params.title;
+    })
+  );
+});
 
+//Get movies by Genre
+app.get("/genres/:genre", (req, res) => {
+  res.json(
+    topMovies.find(movieGenre => {
+      return movieGenre.genre === req.params.genre;
+    })
+  );
+});
 
-// READ
-app.get('/movies/genre/:genreName', (req, res) => {
-    const { genreName } = req.params;
-    const genre = movies.find ( movie => movie.Genre.Name === genreName ).Genre;
+//Get movies by director
+app.get("/directors/:director", (req, res) => {
+  res.json(
+    topMovies.find(movieDirector => {
+      return movieDirector.director === req.params.director;
+    })
+  );
+});
 
-    if (genre) {
-        res.status(200).json(genre);
-    } else {
-        res.status(400).send('no such genre');
-    }
-})
+//Get documentation
+app.get("/documentation", (req, res) => {
+  res.sendFile("public/documentation.html", { root: __dirname }); //respond through express.static
+});
 
+/* Post new user from JSON Object in body:
+{
+  ID: Integer, (generated by uuid)
+  Username: String,
+  Password: String,
+  Email: String,
+}*/
+app.post("/users/:newUser", (req, res) => {
+  res.send("New user added successfully!");
+});
 
-// READ
-app.get('/movies/directors/:directorName', (req, res) => {
-    const { directorName } = req.params;
-    const director = movies.find ( movie => movie.Director.Name === directorName ).Director;
+//Update user information
+app.put("/users/:username", (req, res) => {
+  //To be added later: let user = users.find (username)
+  res.send("Username updated succesfully!");
+});
 
-    if (director) {
-        res.status(200).json(director);
-    } else {
-        res.status(400).send('no such director');
-    }
-// READ
-app.get('/users/names/:userNames'), (req, res) => {
-    const { userNames } = req.params;
-    const users = names.find ( names => names.users.Name === userNames ) .users;
+/*Add movie to user's favorite movie list from JSON Object in body:
+{
+    title: String
+    genre: String,
+    director: String
+}*/
+app.post("/movies/:newMovie", (req, res) => {
+  res.send("Movie added succesfully!");
+});
 
-    if (users) {
-      res.status(200).json(users);
-    } else {
-      res.status(400).send('no such users')
-    }
-    }
-})
+//Delete movie from user's favorite movie list
+app.delete("/movies/:Title", (req, res) => {
+  //To be added later: let movie = movies.find (title)
+  res.send("Movie deleted succesfully!");
+});
 
-// Function to serve all static files inside one folder
-app.use(express.static('public'));
+//Delete user by username
+app.delete("/users/:username", (req, res) => {
+  //To be added later: let user = users.find (username)
+  res.send("User deleted succesfully!");
+});
 
-
-// Error-handling middleware function that will log all application-level errors to the terminal
+// Error Handling
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send('Something went wrong!');
+  console.error(err.stack);
+  res.status(500).send("An error has been detected");
 });
 
-// Server listens to Port 8080. For HTTP Port 80 is the default Port
 app.listen(8080, () => {
-    console.log('Your app is listening to Port 8080.');
+  console.log("This app is listening on port 8080.");
 });
