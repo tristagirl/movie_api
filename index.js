@@ -200,6 +200,17 @@ app.get('/movies/directors/:directorName', (req, res) => {
     } else {
         res.status(400).send('no such director');
     }
+// READ
+app.get('/users/names/:userNames'), (req, res) => {
+    const { userNames } = req.params;
+    const users = names.find ( names => names.users.Name === userNames ) .users;
+
+    if (users) {
+      res.status(200).json(users);
+    } else {
+      res.status(400).send('no such users')
+    }
+    }
 })
 
 // Function to serve all static files inside one folder
