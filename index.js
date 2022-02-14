@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 //invokes middle ware function with "common" parameters using the default format
 app.use(morgan("common"));
 
-let users = [
+let allUsers = [
 
 {
   id: 1,
@@ -202,7 +202,9 @@ app.delete("/users/:id", (req, res) =>{
 
 })
 
-
+app.get("/users"), (req, res) => {
+  res.status(200).json(allUsers);
+}
 
 //GET route located at the endpoint "/movies" which returns a json object in form of a  list of top 10 movies with the status 200 "ok"
 app.get("/movies", (req, res) => {
