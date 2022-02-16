@@ -1,278 +1,313 @@
-//imports express ( a node.js)framework with middlware module packages  body parser, uuid and morgan
-const express = require("express"),
-  morgan = require("morgan"),
-  bodyParser = require("body-parser"),
-  //automatically creates and assigns unique ids to new users
-  uuid = require("uuid");
+// requires the Mongoose package and the Mongoose Models created in models.js
+const mongoose = require('mongoose');
+const Models = require('./models.js');
 
-//sets  express’s functionality to a variable
+// refereing to the model names defined in models.js
+const Movies = Models.Movie;
+const Users= Models.User;
+
+// allows Mongoose to connect to database myFlixDB
+// so it can perform CRUD operations on the documents it contains from within the REST API.
+mongoose.connect('mongodb://localhost:27017/myFlixDB',
+    { useNewUrlParser: true, useUnifiedTopology: true});
+
+// Imports the express module and the Morgan module
+const express = require('express'),
+    morgan = require('morgan'),
+    bodyParser = require('body-parser'),
+    uuid = require('uuid');
+const req = require('express/lib/request');
+const res = require('express/lib/response');
+
+
+/*
+let users = [
+    {
+        id: 1,
+        name: "Kim",
+        favoriteMovies: []
+    },
+    {
+        id: 2,
+        name: "Joe",
+        favoriteMovies: ["The Matrix"]
+    }
+];
+*/
+
+/*
+let movies = [
+    {
+        "Title": "The Matrix",
+        "Genre": {
+            "Name": "Sci-Fi"
+        },
+        "Director": {
+            "Name": "Lana Wachowski"
+        }
+    },
+    {
+        "Title": "Pi",
+        "Genre": {
+            "Name": "Drama"
+        },
+        "Director": {
+            "Name": "Darren Aronofsky"
+        }
+    },
+    {
+        "Title": "American Beauty",
+        "Genre": {
+            "Name": "Drama"
+        },
+        "Director": {
+            "Name": "Sam Mendes"
+        }
+    },
+    {
+        "Title": "Eternal Sunshine of the Spotless Mind",
+        "Genre": {
+            "Name": "Drama"
+        },
+        "Director": {
+            "Name": "Michel Gondry"
+        }
+    },
+    {
+        "Title": "Shutter Island",
+        "Genre": {
+            "Name": "Thriller"
+        },
+        "Director": {
+            "Name": "Martin Scorsese"
+        }
+    },
+    {
+        "Title": "Fight Club",
+        "Genre": {
+            "Name": "Drama"
+        },
+        "Director": {
+            "Name": "David Fincher"
+        }
+    }
+]
+*/
+
+
+// after importing express it needs to be added to the app in order to start using it
 const app = express();
 
-//invokes the middleware module body-parser.
-//it allows you to read the “body” of HTTP requests within your request handlers simply by using the code req.body.
+// reads the data out of the request body
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: true}));
 
-//invokes middle ware function with "common" parameters using the default format
-app.use(morgan("common"));
+// Morgan middleware library in use to log all requests to the terminal
+app.use(morgan('common'));
 
-let allUsers = [
+app.get('/', (req, res) => {
+    res.send('Welcome to myFlix!');
+});
 
+//Add a user
+/* We’ll expect JSON in this format
 {
-  id: 1,
-name:"John",
-favoriteMovies:[]
+  ID: Integer,
+  Username: String,
+  Password: String,
+  Email: String,
+  Birthday: Date
+}*/
+app.post('/users', (req, res) => {
+    Users.findOne({ Username: req.body.Username })
+    .then((user) => {
+        // if user already exists, this message will be returned
+        if (user) {
+            return res.status(400).send(rep.body.Username + 'already exists');
+        } else {
+            // if user does not exist, it will create a new user document in Users collection
+            Users
+                .create({
+                    Username: req.body.Username,
+                    Password: req.body.Password,
+                    Email: req.body.Email,
+                    Birthday: req.body.Birthday
+                })
+                // this callback takes the created document as a parameter, in this case named user.
+                // it will give the client feddback on the transaction, letting them know that it's been completed
+                .then((user) => {
+                    res.status(201).json(user)
+                })
+                // catch() function that will catch any problems that
+                //Mongoose encounters while running the create commmand
+                .catch((error) => {
+                    console.error(error);
+                    res.status(500).send('Error: ' + error);
+                })
+        }
+    })
+    .catch((error) => {
+        console.error(error);
+        res.status(500).send('Error: ' + error);
+    });
+});
 
-},
+// DELETES a user by username
+app.delete('/users/:Username', (req, res) => {
+    Users.findOneAndRemove({ Username: req.params.Username })
+        .then((user) => {
+            if (!user) {
+                res.status(400).send(req.params.Username + ' was not found.');
+            } else {
+                res.status(200).send(req.params.Username + ' was deleted.');
+            }
+        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).send('Error: ' + err);
+        });
+});
 
-{
- id: 2,
-name:"Kim",
-favoriteMovies:[]
-},
+// gets all users
+app.get('/users', (req, res) => {
+    Users.find()
+        .then((users) => {
+            res.status(201).json(users);
+        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).send('Error:' + err);
+        });
+});
 
-{
-  id: 3,
-name:"Jeff",
-favoriteMovies:["Donnie Darko"]
-}
 
-];
+// gets a user by username
+app.get('/users/:Username', (req, res) => {
+    Users.findOne({ Username: req.params.Username })
+        .then((users) => {
+            res.json(users);
+        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).send('Error: ' + err);
+        });
+});
 
-let topMovies = [
-  {
-    Title: "Pineapple Express",
-    Description: "",
-    Genre: {
-      Name: "Comedy",
-      Description:
-        "The comedy genre features stories with high stakes and a lot of conflicts. They’re plot-driven and demand that every character and scene move the story forward. Dramas follow a clearly defined narrative plot structure, portraying real-life scenarios or extreme situations with emotionally-driven characters.",
+// updates the data of a specific user
+app.put('/users/:Username', (req, res) => {
+    Users.findOneAndUpdate({ Username: req.params.Username },
+        { $set: {
+            Username: req.body.Username,
+            Password: req.body.Password,
+            Email: req.body.Email,
+            Birthday: req.body.Birthday
+        }
     },
-    Director: {
-      Name: "Milos Forman",
-      Bio: "Milos Forman was born Jan Tomas Forman in Caslav, Czechoslovakia, to Anna (Svabova), who ran a summer hotel, and Rudolf Forman, a professor. During World War II, his parents were taken away by the Nazis, after being accused of participating in the underground resistance. His father died in Buchenwald and his mother died in Auschwitz, and Milos became an orphan very early on. He studied screen-writing at the Prague Film Academy (F.A.M.U.). In his Czechoslovakian films, Der schwarze Peter (1964), Die Liebe einer Blondine (1965), and Der Feuerwehrball (1967), he created his own style of comedy. During the invasion of his country by the troops of the Warsaw pact in the summer of 1968 to stop the Prague spring, he left Europe for the United States. In spite of difficulties, he filmed Taking Off (1971) there and achieved his fame later with Einer flog über das Kuckucksnest (1975) adapted from the novel of Ken Kesey, which won five Oscars including one for direction. Other important films of Milos Forman were the musical Hair (1979) and his biography of Wolfgang Amadeus Mozart, Amadeus (1984), which won eight Oscars.",
-      Birth: "1932",
-    },
-    imgURL: "",
-    featured: false,
-  },
+    { new: true }, // this makes sure that the updated document is returned
+    (err, updatedUser) => {
+        if(err) {
+            console.error(err);
+            res.status(500).send('Error: ' + err);
+        } else {
+            res.json(updatedUser);
+        }
+    });
+});
 
-  {
-    Title: "Knocked up",
-    Description:
-      "After a chance encounter at a theater, two men, Benigno and Marco, meet at a private clinic where Benigno works. Lydia, Marco's girlfriend and a bullfighter by profession, has been gored and is in a coma. It so happens that Benigno is looking after another woman in a coma, Alicia, a young ballet student. The lives of the four characters will flow in all directions, past, present and future, dragging all of them towards an unsuspected destiny.",
-    Genre: {
-      Name: "Comedy",
-      Description:
-        "The comedy-drama genre features stories with high stakes and a lot of conflicts. They’re plot-driven and demand that every character and scene move the story forward. Dramas follow a clearly defined narrative plot structure, portraying real-life scenarios or extreme situations with emotionally-driven characters.",
+// adds a movie to a users list of favorite movies
+app.post('/users/:Username/movies/:MovieID', (req, res) => {
+    Users.findOneAndUpdate({ Username: req.params.Username },
+        { $push: { FavoriteMovies: req.params.MovieID }
     },
-    Director: {
-      Name: "Pedro Almodovar",
-      Bio: "The most internationally acclaimed Spanish filmmaker since Luis Buñuel was born in a small town (Calzada de Calatrava) in the impoverished Spanish region of La Mancha. He arrived in Madrid in 1968, and survived by selling used items in the flea-market called El Rastro. Almodóvar couldn't study filmmaking because he didn't have the money to afford it. Besides, the filmmaking schools were closed in early 70s by Franco's government. Instead, he found a job in the Spanish phone company and saved his salary to buy a Super 8 camera. From 1972 to 1978, he devoted himself to make short films with the help of of his friends. The 'premieres' of those early films were famous in the rapidly growing world of the Spanish counter-culture. In few years, Almodóvar became a star of 'La Movida', the pop cultural movement of late 70s Madrid. His first feature film, Pepi, Luci, Bom und der Rest der Bande (1980), was made in 16 mm and blown-up to 35 mm for public release. In 1987, he and his brother Agustín Almodóvar established their own production company: El Deseo, S. A. The 'Almodóvar phenomenon' has reached all over the world, making his films very popular in many countries.",
-      Birth: "1949",
-    },
-    imgURL: "",
-    featured: false,
-  },
-
-  {
-    Title: "Donnie Darko",
-    Description:
-      "Donnie Darko doesn't get along too well with his family, his teachers, and his classmates; but he does manage to find a sympathetic friend in Gretchen, who agrees to date him. He has a compassionate psychiatrist, who discovers hypnosis is the means to unlock hidden secrets. His other companion may not be a true ally. Donnie has a friend named Frank, a large bunny which only Donnie can see. When an engine falls off a plane and destroys his bedroom, Donnie is not there. Both the event, and Donnie's escape, seem to have been caused by supernatural events",
-    Genre: {
-      Name: "Mystery",
-      Description:
-        "Mystery films are all about the puzzle, and often feature a detective or amateur sleuth who is trying to solve it. Mystery films are full of suspense, and the protagonist searches for clues or evidence throughout the movie, piecing together events and interviewing suspects to solve the central question. Hardboiled noirs and police procedurals are two subcategories that often fall under the mystery genre.",
-    },
-    Director: {
-      Name: "Richard Kelly",
-      Bio: "James Richard Kelly better known as Richard Kelly, is an American film director and writer, known for writing and directing the cult classic Donnie Darko in 2001. Kelly was born James Richard Kelly in Newport News, Virginia, the son of Lane and Ennis Kelly. He grew up in Midlothian, Virginia, where he attended Midlothian High School and graduated in 1993. When he was a child, his father worked for NASA on the Mars Viking Lander program. He won a scholarship to the University of Southern California to study at the USC School of Cinema-Television where he was a member of the Phi Delta Theta fraternity. He made two short films at USC, The Goodbye Place and Visceral Matter, before graduating in 1997.",
-      Birth: "1975",
-    },
-    imgURL: "",
-    featured: false,
-  },
-
-  {
-    Title: "Nightcrawler",
-    Description:
-      "NIGHTCRAWLER is a thriller set in the nocturnal underbelly of contemporary Los Angeles. Jake Gyllenhaal stars as Lou Bloom, a driven young man desperate for work who discovers the high-speed world of L.A. crime journalism. Finding a group of freelance camera crews who film crashes, fires, murder and other mayhem, Lou muscles into the cut-throat, dangerous realm of nightcrawling - where each police siren wail equals a possible windfall and victims are converted into dollars and cents. Aided by Rene Russo as Nina, a veteran of the blood-sport that is local TV news, Lou blurs the line between observer and participant to become the star of his own story.",
-    Genre: {
-      Name: "Drama",
-      Description:
-        "The drama genre features stories with high stakes and a lot of conflicts. They’re plot-driven and demand that every character and scene move the story forward. Dramas follow a clearly defined narrative plot structure, portraying real-life scenarios or extreme situations with emotionally-driven characters.",
-    },
-    Director: {
-      Name: "Pedro Almodóvar",
-      Bio: "Dan Gilroy was born in Santa Monica, California, the son of Pulitzer Prize-winning playwright Frank D. Gilroy, and sculptor and writer Ruth Dorothy. His brother Tony Gilroy is a screenwriter and director; and his fraternal twin brother, John Gilroy, is a film editor. Through his father, he is of Italian, Irish and German descent.",
-      Birth: "1949",
-    },
-    imgURL: "",
-    featured: false,
-  },
-
-  { Title: "Nightcrawler", year: "2014", director: "Dan Gilroy" },
-  { Title: "Pineapple Express", year: "2011", director: "Takashi Miike" },
-  { Title: "Knocked Up", year: "2001", director: "David Lynch" },
-  { Title: "Parasite", year: "2019", director: "Bong Joon Ho" },
-  { Title: "The Hunt", year: "2012", director: "Thomas Vinterberg" },
-  { Title: "Rear Window", year: "1954", director: "Alfred Hitchcock" },
-  {
-    Title: "The Lord of the Rings: The Return of the King",
-    year: "2003",
-    director: "Peter Jackson",
-  },
-];
+    { new: true }, // this line makes sure that the updated document is returned
+    (err, updatedUser) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send('Error: ' + err);
+        } else {
+            res.json(updatedUser);
+        }
+    });
+});
 
 
-//POST route to add new User
-app.post("/users", (req, res) =>{
-  const newUser = req.body;
+// deletes a movie from a users list of favorite movies
+app.delete('/users/:Username/movies/:MovieID', (req, res) => {
+    Users.findOneAndUpdate({ Username: req.params.Username },
+        { $pull: { FavoriteMovies: req.params.MovieID }
+    },
+    { new: true }, // this line makes sure that the updated document is returned
+    (err, updatedUser) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send('Error: ' + err);
+        } else {
+            res.json(updatedUser);
+        }
+    });
+});
 
-  if(newUser.name) {
-newUser.id = uuid.v4();
-users.push(newUser)
-res.status(201).json(newUser)
-  } else {
-    res.status(400).send("users need names")
-  }
+
+// READ route located at endpoint '/movies', returning .json object with all movies
+app.get('/movies', (req, res) => {
+    Movies.find()
+        .then((movies) => {
+            res.status(201).json(movies);
+        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).send('Error: ' + err);
+        });
+});
+
+// finds a movie by its title
+app.get('/movies/:Title', (req, res) => {
+    Movies.findOne({ Title: req.params.Title })
+        .then((movie) => {
+            res.json(movie);
+        })
+        .catch((err) => {
+            res.status(500).send('Error: ' + err);
+        });
+});
+
+
+// gets description of a genre
+app.get('/genre/:Name', (req, res) => {
+    Movies.findOne({ 'Genre.Name': req.params.Name })
+        .then((movie) => {
+            res.json(movie.Genre.Description);
+        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).send('Error: ' + err);
+        });
 })
 
 
-//PUT route to update User
-app.put("/users/:id", (req, res) =>{
-  const { id } = req.params;
-  const updatedUser = req.body;
-
- let user = users.find(user => user.id == id)
-
- if(user) {
-   user.name = updatedUser.name;
-   res.status(200).json(user);
- } else {
-   res.status(400).send("no such user")
- }
-
-})
-
-
-//POST route to add movie to favorite
-app.post("/users/:id/:movieTitle", (req, res) =>{
-  const { id, movieTitle } = req.params;
-  const updatedUser = req.body;
-
- let user = users.find(user => user.id == id)
-
- if(user) {
-   user.favoriteMovies.push(movieTitle)
-   res.status(200).send(movieTitle + "has been added to the user" + id + " ´s array");
- } else {
-   res.status(400).send("no such user")
- }
-
-})
-
-//DELETE route to delete favorite movie from list
-app.delete("/users/:id/:movieTitle", (req, res) =>{
-  const { id, movieTitle } = req.params;
-  const updatedUser = req.body;
-
- let user = users.find(user => user.id == id)
-
- if(user) {
-   user.favoriteMovies = user.favoriteMovies.filter(title => title !== movieTitle)
-   res.status(200).send(movieTitle + " has been removed from the user " + id + " ´s array");
- } else {
-   res.status(400).send("no such user")
- }
-
-})
-
-//DELETE route to delete user
-app.delete("/users/:id", (req, res) =>{
-  const { id } = req.params;
-
- let user = users.find(user => user.id == id)
-
- if(user) {
-   users = users.filter(user => user.id != id)
-   res.status(200).send("user " + id + " has been deleted");
- } else {
-   res.status(400).send("no such user")
- }
-
-})
-
-app.get("/users", (req, res) => {
-
-  console.log("Requesting /users");
-  res.status(200).json(allUsers);
+// gets information about a director
+app.get('/director/:Name', (req, res) => {
+    Movies.findOne({ 'Director.Name': req.params.Name })
+        .then((movie) => {
+            res.json(movie.Director);
+        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).send('Error: ' + err);
+        });
 });
 
-//GET route located at the endpoint "/movies" which returns a json object in form of a  list of top 10 movies with the status 200 "ok"
-app.get("/movies", (req, res) => {
-  res.status(200).json(topMovies);
-});
-
-//GET route located at the endpoint "/movies/title" which returns a json object with a single movie
-app.get("/movies/:title", (req, res) => {
-  const { title } = req.params; //object destructering, creatinga a variable assigning it to the url requested title
-  const movie = topMovies.find((movie) => movie.Title === title); //find method that sits on an array which takes a function as a parameter
-
-  if (movie) {
-    res.status(200).json(movie);
-  } else {
-    res.status(404).send("no such movie");
-  }
-});
+// Function to serve all static files inside one folder
+app.use(express.static('public'));
 
 
-//GET route located at the endpoint "/movies/title" which returns a json object with a single movie
-app.get("/movies/genre/:genreName", (req, res) => {
-  const { genreName } = req.params; //object destructering, creatinga a variable assigning it to the url requested title
-  const genre = topMovies.find((movie) => movie.Genre.Name === genreName).Genre; //find method that sits on an array which takes a function as a parameter. Very important to add".Genre" at the end. It will only return us the Genre object
-
-  if (genre) {
-    res.status(200).json(genre);
-  } else {
-    res.status(404).send("no such genre");
-  }
-});
-
-//GET route located at the endpoint "/movies/title" which returns a json object with a single movie
-app.get("/movies/directors/:directorName", (req, res) => {
-  const { directorName } = req.params; //object destructering, creatinga a variable assigning it to the url requested title
-  const director = topMovies.find((movie) => movie.Director.Name === directorName).Director; //find method that sits on an array which takes a function as a parameter. Very important to add".Genre" at the end. It will only return us the Genre object
-
-  if (director) {
-    res.status(200).json(director);
-  } else {
-    res.status(404).send("no such director");
-  }
-});
-
-
-//GET request to display message in the browser upon entering "localhost:8080" in the browser
-app.get("/", (req, res) => {
-  res.send("Welcome to my top 10 movies");
-});
-
-//setting up server on port 8080, listen for request
-app.listen(8080, () => {
-  console.log("My app is listening on port 8080.");
-});
-
-//express function that automatically routes all requests for static files to their corresponding files in the "public" folder
-app.use(express.static("public"));
-
-//Morgan middleware library that logs all request
-let myLogger = (req, res, next) => {
-  console.log(req.url);
-  next();
-};
-app.use(myLogger);
-
-//setting the error handler in express(always put it last in line)
+// Error-handling middleware function that will log all application-level errors to the terminal
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send("Error!");
+    console.error(err.stack);
+    res.status(500).send('Something went wrong!');
+});
+
+// Server listens to Port 8080. For HTTP Port 80 is the default Port
+app.listen(8080, () => {
+    console.log('Your app is listening to Port 8080.');
 });
