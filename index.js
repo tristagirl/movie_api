@@ -1,5 +1,6 @@
 // requires the Mongoose package and the Mongoose Models created in models.js
 const mongoose = require('mongoose');
+const { check, validationResult } = require('express-validator');
 const Models = require('./models.js');
 
 // refereing to the model names defined in models.js
@@ -8,8 +9,7 @@ const Users= Models.User;
 
 // allows Mongoose to connect to database myFlixDB
 // so it can perform CRUD operations on the documents it contains from within the REST API.
-mongoose.connect('mongodb://localhost:27017/myFlixDB',
-    { useNewUrlParser: true, useUnifiedTopology: true});
+mongoose.connect('mongodb://localhost:27017/myFlixDB', { useNewURLParser: true, useUnifiedTopology: true });
 
 // Imports the express module and the Morgan module
 const express = require('express'),
@@ -19,82 +19,6 @@ const express = require('express'),
 const req = require('express/lib/request');
 const res = require('express/lib/response');
 
-
-/*
-let users = [
-    {
-        id: 1,
-        name: "Kim",
-        favoriteMovies: []
-    },
-    {
-        id: 2,
-        name: "Joe",
-        favoriteMovies: ["The Matrix"]
-    }
-];
-*/
-
-/*
-let movies = [
-    {
-        "Title": "The Matrix",
-        "Genre": {
-            "Name": "Sci-Fi"
-        },
-        "Director": {
-            "Name": "Lana Wachowski"
-        }
-    },
-    {
-        "Title": "Pi",
-        "Genre": {
-            "Name": "Drama"
-        },
-        "Director": {
-            "Name": "Darren Aronofsky"
-        }
-    },
-    {
-        "Title": "American Beauty",
-        "Genre": {
-            "Name": "Drama"
-        },
-        "Director": {
-            "Name": "Sam Mendes"
-        }
-    },
-    {
-        "Title": "Eternal Sunshine of the Spotless Mind",
-        "Genre": {
-            "Name": "Drama"
-        },
-        "Director": {
-            "Name": "Michel Gondry"
-        }
-    },
-    {
-        "Title": "Shutter Island",
-        "Genre": {
-            "Name": "Thriller"
-        },
-        "Director": {
-            "Name": "Martin Scorsese"
-        }
-    },
-    {
-        "Title": "Fight Club",
-        "Genre": {
-            "Name": "Drama"
-        },
-        "Director": {
-            "Name": "David Fincher"
-        }
-    }
-]
-*/
-
-
 // after importing express it needs to be added to the app in order to start using it
 const app = express();
 
@@ -102,10 +26,18 @@ const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 
+// imports the auth.js file into the project
+// the (app) argument ensures that Express is availible in auth.js file as well
+let auth = require('./auth')(app);
+
+// requires the Passport module and imports passport.js
+const passport = require('passport');
+require('./passport');
+
 // Morgan middleware library in use to log all requests to the terminal
 app.use(morgan('common'));
 
-app.get('/', (req, res) => {
+app.get('/', passport.authenticate('jwt', { session: false }), (req, res) => {
     res.send('Welcome to myFlix!');
 });
 
@@ -118,18 +50,24 @@ app.get('/', (req, res) => {
   Email: String,
   Birthday: Date
 }*/
-app.post('/users', (req, res) => {
+app.post('/users', [
+    check('Username', 'Username is required').isLength({min: 5}),
+    check('Username', 'Username contains non alphanumeric characters - not allowed.').isAlphanumeric(),
+    check('Password', 'Password is required').not().isEmpty(),
+    check('Email', 'Email does not appear to be valid').isEmail()
+  ], (req, res) => {
+    let hashedPassword = Users.hashPassword(req.body.Password);
     Users.findOne({ Username: req.body.Username })
     .then((user) => {
         // if user already exists, this message will be returned
         if (user) {
-            return res.status(400).send(rep.body.Username + 'already exists');
+            return res.status(400).send(req.body.Username + 'already exists');
         } else {
             // if user does not exist, it will create a new user document in Users collection
             Users
                 .create({
                     Username: req.body.Username,
-                    Password: req.body.Password,
+                    Password: hashedPassword,
                     Email: req.body.Email,
                     Birthday: req.body.Birthday
                 })
@@ -153,7 +91,7 @@ app.post('/users', (req, res) => {
 });
 
 // DELETES a user by username
-app.delete('/users/:Username', (req, res) => {
+app.delete('/users/:Username', passport.authenticate('jwt', { session: false }), (req, res) => {
     Users.findOneAndRemove({ Username: req.params.Username })
         .then((user) => {
             if (!user) {
@@ -169,7 +107,7 @@ app.delete('/users/:Username', (req, res) => {
 });
 
 // gets all users
-app.get('/users', (req, res) => {
+app.get('/users', passport.authenticate('jwt', { session: false }), (req, res) => {
     Users.find()
         .then((users) => {
             res.status(201).json(users);
@@ -182,7 +120,7 @@ app.get('/users', (req, res) => {
 
 
 // gets a user by username
-app.get('/users/:Username', (req, res) => {
+app.get('/users/:Username', passport.authenticate('jwt', { session: false }), (req, res) => {
     Users.findOne({ Username: req.params.Username })
         .then((users) => {
             res.json(users);
@@ -194,7 +132,7 @@ app.get('/users/:Username', (req, res) => {
 });
 
 // updates the data of a specific user
-app.put('/users/:Username', (req, res) => {
+app.put('/users/:Username', passport.authenticate('jwt', { session: false }), (req, res) => {
     Users.findOneAndUpdate({ Username: req.params.Username },
         { $set: {
             Username: req.body.Username,
@@ -215,7 +153,7 @@ app.put('/users/:Username', (req, res) => {
 });
 
 // adds a movie to a users list of favorite movies
-app.post('/users/:Username/movies/:MovieID', (req, res) => {
+app.post('/users/:Username/movies/:MovieID', passport.authenticate('jwt', { session: false }), (req, res) => {
     Users.findOneAndUpdate({ Username: req.params.Username },
         { $push: { FavoriteMovies: req.params.MovieID }
     },
@@ -232,7 +170,7 @@ app.post('/users/:Username/movies/:MovieID', (req, res) => {
 
 
 // deletes a movie from a users list of favorite movies
-app.delete('/users/:Username/movies/:MovieID', (req, res) => {
+app.delete('/users/:Username/movies/:MovieID', passport.authenticate('jwt', { session: false }), (req, res) => {
     Users.findOneAndUpdate({ Username: req.params.Username },
         { $pull: { FavoriteMovies: req.params.MovieID }
     },
@@ -249,7 +187,7 @@ app.delete('/users/:Username/movies/:MovieID', (req, res) => {
 
 
 // READ route located at endpoint '/movies', returning .json object with all movies
-app.get('/movies', (req, res) => {
+app.get('/movies', passport.authenticate('jwt', { session: false }), (req, res) => {
     Movies.find()
         .then((movies) => {
             res.status(201).json(movies);
@@ -261,7 +199,7 @@ app.get('/movies', (req, res) => {
 });
 
 // finds a movie by its title
-app.get('/movies/:Title', (req, res) => {
+app.get('/movies/:Title', passport.authenticate('jwt', { session: false }), (req, res) => {
     Movies.findOne({ Title: req.params.Title })
         .then((movie) => {
             res.json(movie);
@@ -273,7 +211,7 @@ app.get('/movies/:Title', (req, res) => {
 
 
 // gets description of a genre
-app.get('/genre/:Name', (req, res) => {
+app.get('/genre/:Name', passport.authenticate('jwt', { session: false }), (req, res) => {
     Movies.findOne({ 'Genre.Name': req.params.Name })
         .then((movie) => {
             res.json(movie.Genre.Description);
@@ -286,7 +224,7 @@ app.get('/genre/:Name', (req, res) => {
 
 
 // gets information about a director
-app.get('/director/:Name', (req, res) => {
+app.get('/director/:Name', passport.authenticate('jwt', { session: false }), (req, res) => {
     Movies.findOne({ 'Director.Name': req.params.Name })
         .then((movie) => {
             res.json(movie.Director);
