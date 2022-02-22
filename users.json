@@ -1,0 +1,4 @@
+{"_id":{"$oid":"604fc7ce3c12eaccf1a9f258"},"Username":"jondoe1","Password":"passcode1","Email":"jondoe1@gmail.com","Birthday":{"$date":"1991-11-16T00:00:00Z"},"FavoriteMovies":[{"$oid":"604fb2dd3c12eaccf1a9f250"}]}
+{"_id":{"$oid":"604fc7d53c12eaccf1a9f259"},"Username":"jondoe2","Password":"passcode1","Email":"jondoe2@hotmail.com","Birthday":{"$date":{"$numberLong":"-619833600000"}},"FavoriteMovies":[{"$oid":"604fb2f53c12eaccf1a9f252"}]}
+{"_id":{"$oid":"604fc7db3c12eaccf1a9f25a"},"Username":"jondoe3","Password":"passcode1","Email":"jondoe3@sprint.ca","Birthday":{"$date":"1991-11-16T00:00:00Z"},"FavoriteMovies":[{"$oid":"604fb2d23c12eaccf1a9f24f"}]}
+{"_id":{"$oid":"604fc86c3c12eaccf1a9f25b"},"Username":"jondoe4","Password":"passcode1","Email":"jondoe4@yahoo.ca","Birthday":{"$date":"1976-10-23T00:00:00Z"},"FavoriteMovies":[{"$oid":"604fb3063c12eaccf1a9f253"},{"$oid":"604fb2f53c12eaccf1a9f252"}]}
