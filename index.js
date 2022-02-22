@@ -27,6 +27,18 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 
 // imports the auth.js file into the project
+let allowedOrigins = ['http://localhost:8080', 'http://testsite.com'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if(!origin) return callback(null, true);
+    if(allowedOrigins.indexOf(origin) === -1){ // If a specific origin isn’t found on the list of allowed origins
+      let message = 'The CORS policy for this application doesn’t allow access from origin ' + origin;
+      return callback(new Error(message ), false);
+    }
+    return callback(null, true);
+  }
+}));
 // the (app) argument ensures that Express is availible in auth.js file as well
 let auth = require('./auth')(app);
 
@@ -246,6 +258,7 @@ app.use((err, req, res, next) => {
 });
 
 // Server listens to Port 8080. For HTTP Port 80 is the default Port
-app.listen(8080, () => {
-    console.log('Your app is listening to Port 8080.');
+const port = process.env.PORT || 8080;
+app.listen(port, '0.0.0.0',() => {
+ console.log('Listening on Port ' + port);
 });
