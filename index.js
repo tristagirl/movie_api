@@ -27,7 +27,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 
 // imports the auth.js file into the project
-let allowedOrigins = ['http://localhost:8080', 'http://testsite.com', 'http://localhost:56686'];
+let allowedOrigins = ['http://localhost:8080', 'http://testsite.com', 'http://localhost:1234'];
 
 const cors = require('cors');
 app.use(cors());
@@ -204,7 +204,7 @@ app.delete('/users/:Username/movies/:MovieID', passport.authenticate('jwt', { se
 
 
 // READ route located at endpoint '/movies', returning .json object with all movies
-app.get('/movies', function (req, res) => {
+app.get('/movies', (req, res) => {
     Movies.find()
         .then((movies) => {
             res.status(201).json(movies);
